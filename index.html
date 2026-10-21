@@ -39,6 +39,9 @@
 
   * { box-sizing: border-box; }
   html, body { overflow: hidden; }
+  /* 노션 다크모드에서 임베드 배경이 흰색으로 칠해지지 않도록 */
+  :root { color-scheme: light dark; }
+  .stage { color-scheme: light; }
   body { margin: 0; padding: 0; background: transparent; color: var(--g-text); font-family: var(--font); }
   /* 노션 임베드용: 고정 크기 무대를 칸에 맞춰 통째로 확대/축소 */
   #root { width: 1022px; padding: 4px 0; transform-origin: 0 0; }
