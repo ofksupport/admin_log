@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 활동 감사 내역 조회하기 · 체험 가이드</title>
+<style>
+  :root {
+    --font: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    /* 가이드 영역 색상 (라이트/다크 대응) */
+    --g-bg: #f3f5f8;
+    --g-surface: #ffffff;
+    --g-text: #1f2a37;
+    --g-muted: #5b6878;
+    --g-line: #d9dfe7;
+    --g-accent: #1c5fb0;
+    --g-done: #2f8a57;
+    /* 콘솔 화면 색상 (실제 제품 화면 재현이라 고정) */
+    --c-blue: #0d5fb3;
+    --c-blue-dark: #0b55a3;
+    --c-navy: #1c3f7a;
+    --c-th: #e9eff7;
+    --c-line: #dfe3e8;
+    --c-text: #333;
+    --c-red: #e5262a;
+    --c-orange: #e8662c;
+    --c-badge: #4a7db5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --g-bg: #14181e; --g-surface: #1d232b; --g-text: #e6eaf0; --g-muted: #9aa6b4;
+      --g-line: #333c47; --g-accent: #6ea8ec; --g-done: #5cc28a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --g-bg: #14181e; --g-surface: #1d232b; --g-text: #e6eaf0; --g-muted: #9aa6b4;
+    --g-line: #333c47; --g-accent: #6ea8ec; --g-done: #5cc28a;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { overflow: hidden; }
+  body { margin: 0; padding: 0; background: transparent; color: var(--g-text); font-family: var(--font); }
+  /* 노션 임베드용: 고정 크기 무대를 칸에 맞춰 통째로 확대/축소 */
+  #root { width: 1022px; padding: 4px 0; transform-origin: 0 0; }
+  button { font-family: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid #f5a623; outline-offset: 2px; }
+
+  /* ---------- 가이드 영역 ---------- */
+  .guide { margin: 0 0 8px; background: var(--g-surface); border: 1px solid var(--g-line); border-radius: 10px; padding: 12px 16px; }
+  .guide-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .guide-head h1 { margin: 0; font-size: 19px; letter-spacing: -0.3px; }
+  .restart { border: 1px solid var(--g-line); background: transparent; color: var(--g-text); border-radius: 6px; padding: 7px 12px; font-size: 13px; }
+  .restart:hover { border-color: var(--g-accent); color: var(--g-accent); }
+  .steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+  .steps li { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--g-muted); padding: 5px 10px 5px 5px; border-radius: 999px; border: 1px solid var(--g-line); }
+  .steps li .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12px; background: var(--g-line); color: var(--g-muted); }
+  .steps li.current { color: var(--g-text); border-color: var(--g-accent); font-weight: 700; }
+  .steps li.current .n { background: var(--g-accent); color: #fff; }
+  .steps li.done { color: var(--g-done); }
+  .steps li.done .n { background: var(--g-done); color: #fff; }
+  .guide-msg { margin: 10px 0 0; font-size: 14px; line-height: 1.6; color: var(--g-muted); min-height: 1.6em; }
+  .guide-msg strong { color: var(--g-text); }
+
+  /* ---------- 스테이지 (화면 크기에 맞춰 축소) ---------- */
+  .stage-wrap { overflow: hidden; border: 1px solid var(--g-line); border-radius: 4px; }
+  .stage { width: 1020px; height: 924px; position: relative; background: #fff; color: var(--c-text); font-size: 13px; }
+
+  /* 헤더 */
+  .app-header { height: 68px; display: flex; align-items: stretch; border-bottom: 1px solid #cfd5dc; box-shadow: 0 1px 3px rgba(0,0,0,.08); position: relative; z-index: 20; background: #fff; }
+  .logo { display: flex; align-items: center; padding-left: 16px; margin-right: auto; }
+  .logo img { display: block; height: 30px; width: auto; }
+  .gnb { display: flex; }
+  .gnb-item { white-space: nowrap; width: 84px; border: 0; border-left: 1px solid #e6e8eb; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12.5px; font-weight: 700; color: #222; padding: 0; }
+  .gnb-item svg { width: 24px; height: 24px; color: #2a5ea8; }
+  .gnb-item .caret { font-size: 8px; color: #6b7d93; line-height: 1; }
+  .hdr-info { border-left: 1px solid #e6e8eb; padding: 0 12px; display: flex; flex-direction: column; justify-content: center; gap: 8px; font-size: 12.5px; min-width: 104px; }
+  .hdr-info div { display: flex; align-items: center; gap: 6px; }
+  .hdr-info svg { width: 15px; height: 15px; color: #555; }
+  .hdr-info .who { margin-left: auto; }
+  .admin-area { display: flex; align-items: center; gap: 4px; padding: 0 8px 0 10px; position: relative; }
+  .admin-btn { width: 44px; height: 44px; border: 1px solid #d5dae0; background: #eef1f5; display: grid; place-items: center; padding: 0; border-radius: 2px; }
+  .admin-btn svg { width: 30px; height: 30px; color: #a7b0bb; }
+  .admin-btn[aria-expanded="true"] { background: #e2e8f0; }
+  .admin-caret { font-size: 9px; color: #6b7d93; }
+
+  .admin-menu { position: absolute; right: 8px; top: 68px; width: 168px; background: #fff; border: 1px solid #c9cfd6; box-shadow: 0 4px 12px rgba(0,0,0,.15); z-index: 22; padding-bottom: 4px; }
+  .admin-menu[hidden] { display: none; }
+  .admin-menu .title { margin: 0 10px; padding: 12px 4px 9px; font-weight: 700; color: var(--c-navy); border-bottom: 2px solid var(--c-blue); font-size: 13px; }
+  .admin-menu button { white-space: nowrap; display: block; width: 100%; text-align: left; border: 0; background: #fff; padding: 11px 14px; font-size: 12.5px; color: #333; }
+  .admin-menu button:hover { background: #f1f5fa; }
+
+  /* 페이지 */
+  .page { padding: 18px 16px 18px; height: calc(100% - 68px); overflow-y: auto; }
+  .page[hidden] { display: none; }
+  .page-title { margin: 6px 0 16px; font-size: 26px; font-weight: 700; color: var(--c-blue); letter-spacing: -0.5px; }
+  .cond.dash { border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .cond-row.tall { height: 54px; }
+  .period { font-size: 13.5px; color: #444; }
+  .dash-print { margin-left: 6px; height: 28px; border: 1px solid #b9c1ca; background: #fff; padding: 0 14px; font-size: 13px; color: #333; }
+  .info-dot { margin-left: 10px; width: 14px; height: 14px; border-radius: 50%; background: #8ea6c2; color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; font-family: Georgia, serif; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .dpanel { border: 1px solid #c9d3df; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.12); overflow: hidden; }
+  .dpanel-head { background: var(--c-blue-dark); color: #fff; font-weight: 700; font-size: 14px; padding: 0 16px; height: 40px; display: flex; align-items: center; justify-content: space-between; }
+  .dpanel-head button { border: 1px solid rgba(255,255,255,.75); background: transparent; color: #fff; font-size: 12.5px; padding: 3px 9px; }
+  .dpanel svg.chart { display: block; width: 100%; height: 230px; }
+  .legend { list-style: none; margin: 0; padding: 4px 22px 18px; font-size: 12.5px; color: #444; min-height: 64px; }
+  .legend li { display: flex; align-items: center; height: 21px; }
+  .legend .sw { width: 11px; height: 11px; margin-right: 5px; }
+  .legend .cnt { margin-left: auto; }
+  .zero { color: #e8662c; }
+  .dpanel-foot { border-top: 1px solid #d5dae0; height: 40px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 0 16px; font-size: 13px; font-weight: 700; color: #333; }
+  .dpanel-foot .zero { font-size: 14px; }
+  .dots { width: 10px; height: 10px; color: var(--c-blue); }
+
+  .cond { border: 1px solid var(--c-line); padding: 6px 20px; margin-bottom: 18px; }
+  .cond-row { display: flex; align-items: center; height: 46px; }
+  .cond-row + .cond-row { border-top: 1px solid #eef0f3; }
+  .cond-label { width: 104px; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
+  .cond-label svg { width: 18px; height: 18px; color: var(--c-navy); }
+  .date { width: 132px; height: 28px; border: 1px solid #c8ced5; display: grid; place-items: center; font-size: 13px; color: #444; }
+  .tilde { margin: 0 8px; color: #777; }
+  .target-sel { width: 400px; height: 28px; border: 1px solid #c8ced5; display: flex; align-items: center; gap: 6px; padding-left: 12px; color: #444; }
+  .target-sel svg { width: 14px; height: 14px; color: var(--c-blue); }
+  .target-sel .chev { margin-left: auto; width: 26px; height: 100%; border-left: 1px solid #c8ced5; display: grid; place-items: center; color: #888; }
+
+  .panel { border: 1px solid #c9d3df; }
+  .panel-head { background: var(--c-blue-dark); color: #fff; font-weight: 700; font-size: 14px; padding: 12px 16px; }
+  .panel-tools { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px; position: relative; }
+  .filter { position: relative; }
+  .filter-btn { width: 150px; height: 28px; border: 1px solid #b9c1ca; background: #fff; display: flex; align-items: center; padding: 0 0 0 8px; font-size: 13px; color: #333; }
+  .filter-btn .chev { margin-left: auto; width: 26px; height: 100%; display: grid; place-items: center; color: #777; border-left: 1px solid #e1e4e8; }
+  .filter-list { position: absolute; left: 0; top: 29px; width: 150px; list-style: none; margin: 0; padding: 4px 0; background: #fff; border: 1px solid #b9c1ca; box-shadow: 0 4px 10px rgba(0,0,0,.12); z-index: 24; }
+  .filter-list[hidden] { display: none; }
+  .filter-list button { display: block; width: 100%; text-align: left; border: 0; background: #fff; padding: 7px 10px; font-size: 13px; color: #333; }
+  .filter-list button:hover, .filter-list button[aria-selected="true"] { background: #eef3fa; }
+  .search { width: 220px; height: 26px; border: 1px solid #c8ced5; padding: 0 8px; font-size: 12.5px; font-family: inherit; color: #333; }
+  .search::placeholder { color: #a0a7b0; }
+  .search-box { display: flex; gap: 3px; }
+  .search-btn { height: 26px; border: 1px solid #c3c9d0; background: #e4e7eb; color: #333; font-size: 12.5px; padding: 0 14px; }
+  .search-btn:hover { background: #d9dde2; }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th { background: var(--c-th); font-weight: 700; color: #333; font-size: 13px; height: 42px; border-bottom: 1px solid #d3dbe6; }
+  th.sub { height: 40px; }
+  thead tr:first-child th.grp { border-bottom: 1px solid #c5cfdc; }
+  td { height: 39px; border-bottom: 1px solid #e8ebef; text-align: center; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+  td.text { text-align: left; }
+  tbody tr:hover td { background: #f8fafc; }
+  .mag { border: 0; background: transparent; padding: 4px; color: #1d5fae; display: inline-grid; place-items: center; }
+  .mag svg { width: 18px; height: 18px; }
+  .empty td { height: 120px; color: #777; white-space: normal; }
+  .sort-ico { width: 14px; height: 12px; vertical-align: -1px; margin-left: 2px; }
+  tbody.flash td { animation: flash 0.7s ease-out; }
+  @keyframes flash { from { background: #fff4cc; } to { background: transparent; } }
+
+  .panel-foot { display: flex; align-items: center; gap: 6px; padding: 18px 12px 14px; }
+  .fake-sel { height: 28px; border: 1px solid #c8ced5; display: flex; align-items: center; padding-left: 8px; font-size: 12.5px; color: #555; }
+  .fake-sel .chev { margin-left: auto; width: 24px; height: 100%; border-left: 1px solid #e1e4e8; display: grid; place-items: center; color: #888; }
+  .pg { width: 28px; height: 28px; border: 1px solid #c8ced5; background: #fff; color: #555; font-size: 13px; padding: 0; }
+  .pg:disabled { color: #c3c8ce; cursor: default; }
+  .count { margin-left: 8px; font-size: 12.5px; color: #444; }
+  .excel { margin-left: auto; height: 32px; border: 1px solid #b9c1ca; background: #fff; display: flex; align-items: center; gap: 6px; padding: 0 14px; font-size: 13px; color: #333; }
+  .excel svg { width: 18px; height: 18px; color: var(--c-blue); }
+
+  /* 오버레이 (화살표·강조 박스) */
+  .overlay { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
+  .overlay[hidden] { display: none; }
+  .hl { position: absolute; border: 3px solid var(--c-red); border-radius: 2px; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(229,38,42,.35); } 50% { box-shadow: 0 0 0 6px rgba(229,38,42,0); } }
+  .arrow { position: absolute; width: 64px; height: 40px; }
+  .arrow svg { width: 64px; height: 40px; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+  .arrow.to-right { animation: nudgeR 1.1s ease-in-out infinite; }
+  .arrow.to-left { animation: nudgeL 1.1s ease-in-out infinite; }
+  .arrow.to-left svg { transform: scaleX(-1); }
+  @keyframes nudgeR { 50% { transform: translateX(-7px); } }
+  @keyframes nudgeL { 50% { transform: translateX(7px); } }
+  .callout { position: absolute; transform: translateY(-50%); background: #fff; border: 2px solid var(--c-red); padding: 8px 12px 8px 8px; display: flex; align-items: center; gap: 9px; max-width: 290px; box-shadow: 0 3px 10px rgba(0,0,0,.15); }
+  .badge { flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--c-badge); color: #fff; font-weight: 700; font-size: 16px; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--c-badge); }
+  .callout-text { font-size: 13.5px; line-height: 1.5; color: #222; font-weight: 700; }
+  .callout-text small { display: block; font-weight: 400; color: #555; font-size: 12.5px; }
+  .shake { animation: shake 0.4s; }
+  @keyframes shake { 20%,60% { translate: -5px 0; } 40%,80% { translate: 5px 0; } }
+
+  /* 토스트 · 상세 팝업 */
+  .toast { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); background: #2b3440; color: #fff; padding: 11px 16px; border-radius: 4px; font-size: 13px; line-height: 1.5; max-width: 520px; z-index: 40; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  .toast[hidden] { display: none; }
+  tr.open td { background: #f8fafc; }
+  tr.detail td { background: #f4f4f4; height: auto; padding: 14px 50px 22px; white-space: normal; text-align: left; overflow: visible; }
+  tr.detail:hover td { background: #f4f4f4; }
+  .dl { margin: 0; display: grid; grid-template-columns: 186px 1fr; font-size: 12.5px; color: #333; }
+  .dl dt, .dl dd { margin: 0; padding: 12px 14px; border-bottom: 1px dashed #dcdcdc; display: flex; align-items: center; }
+  .dl dt { font-weight: 700; }
+  .dl dd { white-space: pre-line; line-height: 1.55; word-break: break-all; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hl, .arrow.to-right, .arrow.to-left, .shake, tbody.flash td { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="root">
+<section class="guide" aria-label="체험 가이드">
+  <div class="guide-head">
+  <ol class="steps" id="steps">
+    <li data-step="1"><span class="n">1</span>관리자 메뉴 열기</li>
+    <li data-step="2"><span class="n">2</span>관리자 활동 감사 내역</li>
+    <li data-step="3"><span class="n">3</span>보기 항목 열기</li>
+    <li data-step="4"><span class="n">4</span>항목 선택</li>
+  </ol>
+    <button class="restart" id="restart" type="button">처음부터 다시</button>
+  </div>
+  <p class="guide-msg" id="guideMsg" aria-live="polite"></p>
+</section>
+
+<div class="stage-wrap" id="stageWrap">
+  <div class="stage" id="stage">
+
+    <header class="app-header">
+      <div class="logo"><img src="data:image/png;base64,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" alt="OfficeKeeper Endpoint Protection" width="273" height="30"></div>
+      <nav class="gnb" aria-label="주 메뉴">
+        <button class="gnb-item" type="button" data-out>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="2.5" width="6" height="5"/><rect x="2" y="16.5" width="6" height="5"/><rect x="9" y="16.5" width="6" height="5"/><rect x="16" y="16.5" width="6" height="5"/><path d="M12 7.5v4M5 16.5v-5h14v5M12 11.5v5"/></svg>
+          조직도<span class="caret">▼</span></button>
+        <button class="gnb-item" type="button" data-out>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3.5" width="19" height="13" rx="1"/><path d="M9 21h6M12 16.5V21"/></svg>
+          에이전트<span class="caret">▼</span></button>
+        <button class="gnb-item" type="button" data-out>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v16H4z"/><path d="M4 13h5l1.5 2.5h3L15 13h5M8 8h8"/></svg>
+          계약관리<span class="caret">▼</span></button>
+        <button class="gnb-item" type="button" data-out>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="15.5" cy="8.5" r="5"/><circle cx="15.5" cy="8.5" r="1.5"/><path d="M12 12 3 21M6 18l2 2M8.5 15.5l2 2"/></svg>
+          임시 비밀번호</button>
+        <button class="gnb-item" type="button" data-out>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="6" rx="1"/><rect x="17" y="13" width="4" height="6" rx="1"/><path d="M19 19c0 1.5-2 2.5-5 2.5"/></svg>
+          고객센터<span class="caret">▼</span></button>
+      </nav>
+      <div class="hdr-info">
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="10" height="18"/><path d="M14 9h6v12h-6M7 7h1M10 7h1M7 11h1M10 11h1M7 15h1M10 15h1"/></svg>3.14.1</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="11" width="11" height="9" rx="1"/><path d="M6.5 11V8a3 3 0 0 1 6 0v3"/><circle cx="18" cy="9" r="3"/></svg><span class="who">운영</span></div>
+      </div>
+      <div class="admin-area">
+        <button class="admin-btn" id="adminBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="관리자 메뉴">
+          <svg viewBox="0 0 32 32" fill="currentColor"><rect x="5" y="6" width="14" height="22"/><rect x="19" y="13" width="8" height="15" opacity=".75"/><g fill="#fff"><rect x="8" y="9" width="3" height="3"/><rect x="13" y="9" width="3" height="3"/><rect x="8" y="15" width="3" height="3"/><rect x="13" y="15" width="3" height="3"/><rect x="8" y="21" width="3" height="3"/><rect x="13" y="21" width="3" height="3"/><rect x="21.5" y="17" width="3" height="2.5"/><rect x="21.5" y="22" width="3" height="2.5"/></g></svg>
+        </button>
+        <span class="admin-caret">▼</span>
+        <div class="admin-menu" id="adminMenu" role="menu" hidden>
+          <div class="title">관리자 메뉴</div>
+          <button type="button" role="menuitem" data-out>내 정보 조회 및 수정</button>
+          <button type="button" role="menuitem" data-out>알림메일 수신설정</button>
+          <button type="button" role="menuitem" data-out>관리자 관리 및 추가설정</button>
+          <button type="button" role="menuitem" data-out>관리자 보안정책 설정</button>
+          <button type="button" role="menuitem" id="menuAudit">관리자 활동 감사 내역</button>
+          <button type="button" role="menuitem" data-out>언어 및 시간대 설정</button>
+          <button type="button" role="menuitem" data-out>로그아웃</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 시작 화면 (다른 메뉴에 있는 상태) -->
+    <main class="page" id="pageHome">
+      <h2 class="page-title">대시보드</h2>
+      <div class="cond dash">
+        <div class="cond-row tall">
+          <div class="cond-label"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v16H3z" opacity=".15"/><path d="M3 5h18v4H3z"/><path d="M7 2.5v4M17 2.5v4" stroke="currentColor" stroke-width="2"/><g><rect x="6" y="12" width="3" height="2.5"/><rect x="10.5" y="12" width="3" height="2.5"/><rect x="15" y="12" width="3" height="2.5"/><rect x="6" y="16" width="3" height="2.5"/><rect x="10.5" y="16" width="3" height="2.5"/></g></svg>조회기간</div>
+          <span class="period">2026-10-15 ~ 2026-10-21</span>
+        </div>
+        <div class="cond-row tall">
+          <div class="cond-label"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.5"/><path d="M1.5 19c0-4 3-6.5 7-6.5s7 2.5 7 6.5z"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13c3.5-.4 6.5 1.6 6.5 5.5h-5.3c0-2.2-.4-4-1.2-5.5z"/></svg>대상선택</div>
+          <div class="target-sel"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="11" height="18"/><rect x="14" y="9" width="7" height="12" opacity=".7"/></svg>OK 3<span class="chev">⌵</span></div>
+          <button class="dash-print" type="button" data-out>대시보드 출력</button>
+          <span class="info-dot" aria-hidden="true">i</span>
+        </div>
+      </div>
+      <div class="dash-grid">
+        <section class="dpanel">
+          <div class="dpanel-head">매체 정보유출 현황<button type="button" data-out>상세</button></div>
+          <svg class="chart" viewBox="0 0 490 230" preserveAspectRatio="none" aria-hidden="true"><text x="30" y="96" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2a5ea8">0</text><line x1="48" y1="92" x2="456" y2="92" stroke="#dde2e8"/><line x1="48" y1="182" x2="456" y2="182" stroke="#b9c9dc"/><g font-size="12.5" font-weight="700" fill="#2a5ea8"><text x="68.0" y="203" text-anchor="middle">15일</text><text x="133.3" y="203" text-anchor="middle">16일</text><text x="198.7" y="203" text-anchor="middle">17일</text><text x="264.0" y="203" text-anchor="middle">18일</text><text x="329.3" y="203" text-anchor="middle">19일</text><text x="394.7" y="203" text-anchor="middle">20일</text><text x="460.0" y="203" text-anchor="middle">21일</text></g></svg>
+          <ul class="legend">
+            <li><span class="sw" style="background:#f26a10"></span>매체 저장<span class="cnt">(총 <span class="zero">0</span> 건)</span></li>
+            <li><span class="sw" style="background:#f7a050"></span>USB 무단반출<span class="cnt">(총 <span class="zero">0</span> 건)</span></li>
+          </ul>
+          <div class="dpanel-foot"><svg class="dots" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="2" r="1.6"/><circle cx="2" cy="7.5" r="1.6"/><circle cx="8" cy="7.5" r="1.6"/></svg>총 정보유출 건수 <span class="zero">0</span> 건</div>
+        </section>
+        <section class="dpanel">
+          <div class="dpanel-head">매체 정보유출 차단현황<button type="button" data-out>상세</button></div>
+          <svg class="chart" viewBox="0 0 490 230" preserveAspectRatio="none" aria-hidden="true"><text x="30" y="96" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2a5ea8">0</text><line x1="48" y1="92" x2="456" y2="92" stroke="#dde2e8"/><line x1="48" y1="182" x2="456" y2="182" stroke="#b9c9dc"/><g font-size="12.5" font-weight="700" fill="#2a5ea8"><text x="68.0" y="203" text-anchor="middle">15일</text><text x="133.3" y="203" text-anchor="middle">16일</text><text x="198.7" y="203" text-anchor="middle">17일</text><text x="264.0" y="203" text-anchor="middle">18일</text><text x="329.3" y="203" text-anchor="middle">19일</text><text x="394.7" y="203" text-anchor="middle">20일</text><text x="460.0" y="203" text-anchor="middle">21일</text></g></svg>
+          <ul class="legend">
+            <li><span class="sw" style="background:#0b55a3"></span>매체 차단<span class="cnt">(총 <span class="zero">0</span> 건)</span></li>
+          </ul>
+          <div class="dpanel-foot"><svg class="dots" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="2" r="1.6"/><circle cx="2" cy="7.5" r="1.6"/><circle cx="8" cy="7.5" r="1.6"/></svg>총 정보유출 차단건수 <span class="zero">0</span> 건</div>
+        </section>
+      </div>
+    </main>
+
+    <!-- 관리자 활동 감사 내역 -->
+    <main class="page" id="pageAudit" hidden>
+      <h2 class="page-title">관리자 활동 감사 내역</h2>
+      <div class="cond">
+        <div class="cond-row">
+          <div class="cond-label"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v16H3z" opacity=".15"/><path d="M3 5h18v4H3z"/><path d="M7 2.5v4M17 2.5v4" stroke="currentColor" stroke-width="2"/><g><rect x="6" y="12" width="3" height="2.5"/><rect x="10.5" y="12" width="3" height="2.5"/><rect x="15" y="12" width="3" height="2.5"/><rect x="6" y="16" width="3" height="2.5"/><rect x="10.5" y="16" width="3" height="2.5"/></g></svg>기간선택</div>
+          <div class="date">2026-10-15</div><span class="tilde">~</span><div class="date">2026-10-21</div>
+        </div>
+        <div class="cond-row">
+          <div class="cond-label"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.5"/><path d="M1.5 19c0-4 3-6.5 7-6.5s7 2.5 7 6.5z"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13c3.5-.4 6.5 1.6 6.5 5.5h-5.3c0-2.2-.4-4-1.2-5.5z"/></svg>대상선택</div>
+          <div class="target-sel"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="11" height="18"/><rect x="14" y="9" width="7" height="12" opacity=".7"/></svg>3.14.1<span class="chev">⌵</span></div>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">관리자 활동 감사 내역</div>
+        <div class="panel-tools">
+          <div class="filter" id="filterWrap">
+            <button class="filter-btn" id="filterBtn" type="button" aria-haspopup="listbox" aria-expanded="false"><span id="filterLabel">전체</span><span class="chev">⌵</span></button>
+            <ul class="filter-list" id="filterList" role="listbox" hidden>
+              <li><button type="button" data-opt="all" aria-selected="true">전체</button></li>
+              <li><button type="button" data-opt="login">접속 기록</button></li>
+              <li><button type="button" data-opt="change">변경 기록</button></li>
+              <li><button type="button" data-opt="monthly">월간 로그 다운로드</button></li>
+              <li><button type="button" data-opt="excel">엑셀 다운로드</button></li>
+            </ul>
+          </div>
+          <div class="search-box"><input class="search" id="search" type="search" placeholder="검색하세요." aria-label="검색어"><button class="search-btn" id="searchBtn" type="button">검색</button></div>
+        </div>
+        <table>
+          <colgroup>
+            <col style="width:60px"><col style="width:150px"><col><col style="width:104px"><col style="width:112px"><col style="width:80px"><col style="width:90px"><col style="width:166px">
+          </colgroup>
+          <thead>
+            <tr>
+              <th rowspan="2">상세</th><th rowspan="2">활동</th><th rowspan="2">내용</th>
+              <th colspan="4" class="grp">관리자 정보</th>
+              <th rowspan="2">시각<svg class="sort-ico" viewBox="0 0 14 12" fill="none" stroke="#333" stroke-width="1.4"><path d="M3 1v10M1 9l2 2 2-2M7 2h6M7 6h5M7 10h4"/></svg></th>
+            </tr>
+            <tr><th class="sub">이름</th><th class="sub">통합계정</th><th class="sub">관리범위</th><th class="sub">관리권한</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="panel-foot">
+          <div class="fake-sel" style="width:150px">10 개씩 보기<span class="chev">⌵</span></div>
+          <div class="fake-sel" style="width:150px"><span id="pageLabel">1 페이지</span><span class="chev">⌵</span></div>
+          <button class="pg" id="prev" type="button" aria-label="이전 페이지">&lt;</button>
+          <button class="pg" id="next" type="button" aria-label="다음 페이지">&gt;</button>
+          <span class="count" id="count"></span>
+          <button class="excel" id="excelBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2.5h9l4 4V21.5H6z"/><path d="M15 2.5v4h4M12.5 10v7M9.5 14l3 3 3-3"/></svg>엑셀 다운로드</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="overlay" id="overlay" hidden>
+      <div class="hl" id="hl"></div>
+      <div class="arrow" id="arrow"><svg viewBox="0 0 64 40"><path d="M0 13H38V2L64 20L38 38V27H0Z" fill="#e8662c"/></svg></div>
+      <div class="callout" id="callout"><span class="badge" id="badge"></span><span class="callout-text" id="calloutText"></span></div>
+    </div>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+
+
+  </div>
+</div>
+</div>
+
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+
+  /* 예시 데이터: 실제 화면을 바탕으로 이름·계정은 가상의 값으로 바꿨습니다 */
+  const ADMINS = {
+    kim:  { name: '김하늘테스트',  acct: 'skyk21@example.com' },
+    ops:  { name: '운영지원팀',    acct: 'opsupport@example.com' },
+    lee:  { name: '이도윤 테스트', acct: 'dyl0412@example.com' },
+    root: { name: '관리자',        acct: 'admin-demo' },
+    min:  { name: 'minjun77',      acct: 'minjun77@example.com' }
+  };
+  /* extra: 상세 펼침에서 쓰는 메뉴(menu)·활동(act)·상세 내용(detail). 없으면 기본값 사용 */
+  const rec = (type, cat, text, who, at, extra) => Object.assign({ type, cat, text, name: ADMINS[who].name, acct: ADMINS[who].acct, at }, extra);
+  const loginText = (who, out) => '관리자' + ADMINS[who].acct + '가 ' + (out ? '로그아웃' : '로그인') + '하였습니다.';
+  const login = (who, out, at) => rec('login', out ? '로그아웃' : '로그인', loginText(who, out), who, at, { menu: out ? '로그아웃' : '로그인', act: '-' });
+
+  const FIXED = [
+    /* 접속 기록 */
+    login('kim', false, '2026-10-21 10:31:24'), login('kim', true, '2026-10-20 18:13:37'),
+    login('kim', false, '2026-10-20 17:31:04'), login('ops', true, '2026-10-20 17:30:46'),
+    login('ops', false, '2026-10-20 17:30:02'), login('lee', true, '2026-10-20 17:19:35'),
+    login('lee', false, '2026-10-20 15:54:11'), login('root', true, '2026-10-20 15:54:08'),
+    login('root', false, '2026-10-20 15:53:55'), login('root', true, '2026-10-20 15:22:23'),
+    /* 변경 기록 */
+    rec('change', '에이전트 배포', '에이전트 삭제 권한을 허용하였습니다.', 'kim', '2026-10-20 17:41:05'),
+    rec('change', '에이전트 배포', '에이전트 삭제 권한을 해제하였습니다.', 'kim', '2026-10-20 17:37:01'),
+    rec('change', '에이전트 배포', '에이전트 삭제 권한을 허용하였습니다.', 'kim', '2026-10-20 17:31:13'),
+    rec('change', '내 정보 조회 및 수정', '관리자( skyk21@example.com )가 비밀번호를 변경하였습니다.', 'kim', '2026-10-20 17:31:00'),
+    rec('change', '관리자 관리 및 추가설정', '관리자( skyk21@example.com )를 추가하였습니다.', 'ops', '2026-10-20 17:30:38'),
+    rec('change', '조직도 설정', '사용자를 추가하였습니다.', 'ops', '2026-10-20 17:30:25'),
+    rec('change', '예외 설정', '“이도윤 테스트” 을(를) 예외 설정하였습니다.', 'lee', '2026-10-20 16:49:33'),
+    rec('change', '정책 추가하기', '“이도윤 테스트” 정책을 추가하였습니다.', 'lee', '2026-10-20 16:49:30'),
+    rec('change', '에이전트 배포', '에이전트 삭제 권한을 허용하였습니다.', 'lee', '2026-10-20 16:27:14'),
+    rec('change', '실시간 검사 세부 설정', '“실시간 검사 세부 설정 - 검사불가 파일” 을(를) 설정하였습니다.', 'lee', '2026-10-20 16:15:04'),
+    /* 월간 로그 다운로드 */
+    rec('monthly', '월간 로그 다운로드', '오피스키퍼_정보유출방지_3.14.1-테스트_202609.xlsx (321.83KB) 파일을 다운로드하였습니다.', 'ops', '2026-10-16 11:56:14',
+      { menu: '정보유출방지', detail: '- 선택 기간 : 2026-09-01 ~ 2026-09-30' }),
+    /* 엑셀 다운로드 */
+    rec('excel', '엑셀 다운로드', '일괄 다운로드 파일 정보2026-10-15 10:11:05~2026-10-22 23:59:59.xls 파일을 다운로드하였습니다.', 'min', '2026-10-15 10:12:53', { menu: '백업 〉 일괄 다운로드 내역' }),
+    rec('excel', '엑셀 다운로드', '일괄 다운로드 내역2026-10-09~2026-10-15.xls 파일을 다운로드하였습니다.', 'min', '2026-10-15 10:12:49', { menu: '백업 〉 일괄 다운로드 내역' }),
+    rec('excel', '엑셀 다운로드', '승인 요청 파일 백업내역2026-10-09~2026-10-15.xls 파일을 다운로드하였습니다.', 'min', '2026-10-15 10:10:25', { menu: '백업 〉 승인 요청 파일 백업내역' }),
+    rec('excel', '엑셀 다운로드', '승인 요청 현황 및 승인내역_전체20261015.xls 파일을 다운로드하였습니다.', 'min', '2026-10-15 10:06:55', { menu: '승인 〉 승인 요청 현황 및 승인내역' }),
+    rec('excel', '엑셀 다운로드', '실시간 검사 보고서_3.14.1-테스트.xls 파일을 다운로드하였습니다.', 'min', '2026-10-15 09:09:29', { menu: '실시간 검사 〉 실시간 검사 보고서' })
+  ];
+
+  /* 실제 화면과 건수를 맞추기 위한 보충 데이터 (접속 25건, 변경 120건) */
+  function seeded(seed) {
+    return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  const rand = seeded(20261021);
+  const pad = (n) => String(n).padStart(2, '0');
+  const toMs = (str) => Date.parse(str.replace(' ', 'T') + 'Z');
+  const fmt = (ms) => { const d = new Date(ms);
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + ' ' +
+      pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()); };
+  const minutes = (lo, hi) => (lo + rand() * (hi - lo)) * 60000 + Math.floor(rand() * 60) * 1000;
+
+  const CHANGE_TPL = [
+    ['개별 설정', '“개별 설정” 을(를) 설정하였습니다.'],
+    ['확장자 설정', '“확장자 설정” 을(를) 설정하였습니다.'],
+    ['카테고리별 차단설정', '“카테고리별 차단설정 - 메신저” 을(를) 설정하였습니다.'],
+    ['카테고리별 차단설정', '“카테고리별 차단설정 - 웹브라우저” 을(를) 설정하였습니다.'],
+    ['파일첨부 차단설정', '“암호화 파일의 첨부(전송)를 허용합니다.” 로 설정하였습니다.'],
+    ['파일첨부 차단설정', '“개인정보 미포함 파일의 첨부(전송)를 허용합니다.” 로 설정하였습니다.'],
+    ['에이전트 배포', '에이전트 삭제 권한을 허용하였습니다.'],
+    ['에이전트 배포', '에이전트 삭제 권한을 해제하였습니다.'],
+    ['조직도 설정', '사용자를 추가하였습니다.'],
+    ['실시간 검사 세부 설정', '“실시간 검사 세부 설정 - 검사 대상” 을(를) 설정하였습니다.']
+  ];
+  const CHANGERS = ['kim', 'ops', 'lee', 'min'];
+  const FILLER = [];
+  let t = toMs('2026-10-20 16:15:04');
+  for (let i = 0; i < 110; i++) {
+    t -= minutes(6, 95);
+    const [cat, text] = CHANGE_TPL[Math.floor(rand() * CHANGE_TPL.length)];
+    FILLER.push(rec('change', cat, text, CHANGERS[Math.floor(rand() * CHANGERS.length)], fmt(t)));
+  }
+  t = toMs('2026-10-20 15:22:23');
+  t -= minutes(20, 180);
+  FILLER.push(login('root', false, fmt(t)));
+  for (let i = 0; i < 7; i++) {
+    const who = CHANGERS[i % CHANGERS.length];
+    t -= minutes(30, 300); FILLER.push(login(who, true, fmt(t)));
+    t -= minutes(20, 240); FILLER.push(login(who, false, fmt(t)));
+  }
+
+  const DATA = FIXED.concat(FILLER).sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  DATA.forEach((r, i) => { r.id = i; });
+
+  /* 상세 펼침에 쓰는 값 (접속 IP도 가상의 값) */
+  const IP = { kim: '192.168.10.21', ops: '192.168.10.12', lee: '192.168.10.33', root: '192.168.10.2', min: '192.168.10.47' };
+  const whoOf = (r) => Object.keys(ADMINS).find((k) => ADMINS[k].acct === r.acct);
+  function detailOf(r) {
+    if (r.cat === '에이전트 배포') {
+      return '[사용자 정보]\n- 이름 : ' + r.name + '\n- 이메일 : ' + r.acct + '\n- 부서: 3.14.1-테스트\n- 통합계정 : ' + r.acct;
+    }
+    return '-';
+  }
+  const LABEL = { all: '전체', login: '접속 기록', change: '변경 기록', monthly: '월간 로그 다운로드', excel: '엑셀 다운로드' };
+  const PER_PAGE = 10;
+
+  /* 단계 정의: 어떤 요소를 가리킬지, 화살표 방향, 안내 문구 */
+  const STEPS = {
+    1: { el: () => $('#adminBtn'),  side: 'left',
+         msg: '화면 <strong>우측 상단의 관리자 아이콘</strong>을 클릭하세요.',
+         callout: '관리자 아이콘 클릭' },
+    2: { el: () => $('#menuAudit'), side: 'left',
+         msg: '관리자 메뉴에서 <strong>관리자 활동 감사 내역</strong>을 클릭하세요.',
+         callout: '로그인 및 정책변경 내역 조회' },
+    3: { el: () => $('#filterBtn'), side: 'right',
+         msg: '목록 왼쪽 위의 <strong>보기 항목(전체)</strong>을 클릭해 목록을 여세요.',
+         callout: '보기 항목 열기' },
+    4: { el: () => $('#filterList'), side: 'right',
+         msg: '원하는 항목을 선택하세요. 선택한 활동의 내역만 목록에 남습니다.',
+         callout: '항목 선택<small>접속 기록: 로그인·로그아웃 내역<br>변경 기록: 정책·설정 변경 내역<br>월간 로그·엑셀 다운로드: 관리자가 파일을 받은 내역</small>' }
+  };
+
+  const state = { step: 1, filter: 'all', page: 1, query: '', openId: null };
+  let scale = 1;
+
+  const stage = $('#stage'), wrap = $('#stageWrap'), overlay = $('#overlay');
+  const hl = $('#hl'), arrow = $('#arrow'), callout = $('#callout');
+  const adminBtn = $('#adminBtn'), adminMenu = $('#adminMenu');
+  const filterBtn = $('#filterBtn'), filterList = $('#filterList');
+  const tbody = $('#tbody');
+
+  /* ---------- 화면 크기 맞춤 ---------- */
+  const root = document.getElementById('root');
+  function fit() {
+    scale = Math.min(innerWidth / root.offsetWidth, innerHeight / root.offsetHeight, 1.4);
+    root.style.transform = 'scale(' + scale + ')';
+    placeGuide();
+  }
+
+  /* ---------- 화살표 · 강조 박스 위치 계산 ---------- */
+  function placeGuide() {
+    const s = STEPS[state.step];
+    if (!s) { overlay.hidden = true; return; }
+    const el = s.el();
+    if (!el || el.offsetParent === null) { overlay.hidden = true; return; }
+    overlay.hidden = false;
+
+    const sr = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const x = (r.left - sr.left) / scale, y = (r.top - sr.top) / scale;
+    const w = r.width / scale, h = r.height / scale, cy = y + h / 2;
+    const AW = 64, AH = 40, GAP = 8, PAD = 4;
+
+    Object.assign(hl.style, { left: x - PAD + 'px', top: y - PAD + 'px', width: w + PAD * 2 + 'px', height: h + PAD * 2 + 'px' });
+    arrow.style.top = cy - AH / 2 + 'px';
+    callout.style.top = Math.max(cy, 34) + 'px';
+
+    if (s.side === 'left') {
+      const tip = x - PAD - GAP;
+      arrow.className = 'arrow to-right';
+      arrow.style.left = tip - AW + 'px';
+      callout.style.left = '';
+      callout.style.right = (1020 - (tip - AW - 6)) + 'px';
+    } else {
+      const tip = x + w + PAD + GAP;
+      arrow.className = 'arrow to-left';
+      arrow.style.left = tip + 'px';
+      callout.style.right = '';
+      callout.style.left = tip + AW + 6 + 'px';
+    }
+    $('#badge').textContent = state.step;
+    $('#calloutText').innerHTML = s.callout;
+  }
+
+  /* ---------- 가이드 진행 ---------- */
+  function go(step, detail) {
+    state.step = step;
+    document.querySelectorAll('#steps li').forEach((li) => {
+      const n = Number(li.dataset.step);
+      li.className = n < step ? 'done' : n === step ? 'current' : '';
+      li.setAttribute('aria-current', n === step ? 'step' : 'false');
+    });
+    const msg = $('#guideMsg');
+    if (STEPS[step]) {
+      msg.innerHTML = STEPS[step].msg;
+    } else {
+      msg.innerHTML = '완료했습니다. 목록이 <strong>' + LABEL[state.filter] + '</strong> 내역으로 바뀌었습니다. 다른 보기 항목, 검색, 🔍 상세 보기도 자유롭게 눌러 보세요.';
+    }
+    requestAnimationFrame(placeGuide);
+  }
+
+  function nudge() {
+    [hl, callout].forEach((n) => { n.classList.remove('shake'); void n.offsetWidth; n.classList.add('shake'); });
+  }
+
+  /* 가이드 진행 중에는 지정된 곳만 클릭 가능 */
+  stage.addEventListener('click', (e) => {
+    const s = STEPS[state.step];
+    if (!s) return;
+    if (s.el().contains(e.target)) return;
+    e.stopPropagation();
+    e.preventDefault();
+    nudge();
+  }, true);
+
+  /* ---------- 관리자 메뉴 ---------- */
+  function setMenu(open) {
+    adminMenu.hidden = !open;
+    adminBtn.setAttribute('aria-expanded', String(open));
+  }
+  adminBtn.addEventListener('click', () => {
+    setMenu(adminMenu.hidden);
+    if (state.step === 1) go(2);
+  });
+  $('#menuAudit').addEventListener('click', () => {
+    setMenu(false);
+    $('#pageHome').hidden = true;
+    $('#pageAudit').hidden = false;
+    renderTable();
+    if (state.step === 2) go(3); else fit();
+  });
+  document.querySelectorAll('[data-out]').forEach((b) =>
+    b.addEventListener('click', () => toast('이 체험에서는 ‘관리자 활동 감사 내역’ 화면만 열어볼 수 있습니다.')));
+
+  /* ---------- 보기 항목 드롭다운 ---------- */
+  function setList(open) {
+    filterList.hidden = !open;
+    filterBtn.setAttribute('aria-expanded', String(open));
+  }
+  filterBtn.addEventListener('click', () => {
+    setList(filterList.hidden);
+    if (state.step === 3) go(4);
+  });
+  filterList.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-opt]');
+    if (!b) return;
+    const v = b.dataset.opt;
+    setList(false);
+    state.filter = v;
+    state.page = 1;
+    $('#filterLabel').textContent = LABEL[v];
+    filterList.querySelectorAll('[data-opt]').forEach((o) => o.setAttribute('aria-selected', String(o.dataset.opt === v)));
+    renderTable(true);
+    if (state.step >= 4) go(5);
+  });
+
+  /* 완료 후 자유 체험: 바깥 클릭 시 열린 목록 닫기 */
+  document.addEventListener('click', (e) => {
+    if (STEPS[state.step]) return;
+    if (!adminMenu.hidden && !e.target.closest('.admin-area')) setMenu(false);
+    if (!filterList.hidden && !e.target.closest('#filterWrap')) setList(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!STEPS[state.step]) { setMenu(false); setList(false); }
+  });
+
+  /* ---------- 표 ---------- */
+  function rowsNow() {
+    const q = state.query.trim().toLowerCase();
+    return DATA.filter((r) =>
+      (state.filter === 'all' || r.type === state.filter) &&
+      (!q || [r.cat, r.text, r.name, r.acct, r.at].join(' ').toLowerCase().includes(q)));
+  }
+  function td(text, cls) {
+    const c = document.createElement('td');
+    c.textContent = text;
+    c.title = text;
+    if (cls) c.className = cls;
+    return c;
+  }
+  function renderTable(flash) {
+    const rows = rowsNow();
+    if (flash) state.openId = null;
+    const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
+    state.page = Math.min(state.page, pages);
+    const start = (state.page - 1) * PER_PAGE;
+    const slice = rows.slice(start, start + PER_PAGE);
+
+    tbody.replaceChildren();
+    slice.forEach((r) => {
+      const tr = document.createElement('tr');
+      const c0 = document.createElement('td');
+      const mag = document.createElement('button');
+      mag.type = 'button';
+      mag.className = 'mag';
+      const isOpen = state.openId === r.id;
+      mag.setAttribute('aria-label', isOpen ? '상세 닫기' : '상세 보기');
+      mag.setAttribute('aria-expanded', String(isOpen));
+      mag.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/></svg>';
+      mag.addEventListener('click', () => { state.openId = isOpen ? null : r.id; renderTable(); });
+      c0.appendChild(mag);
+      tr.append(c0, td(r.cat), td(r.text, 'text'), td(r.name), td(r.acct), td('전체'), td('모든 권한'), td(r.at));
+      tbody.appendChild(tr);
+      if (isOpen) { tr.className = 'open'; tbody.appendChild(detailRow(r)); }
+    });
+    if (!slice.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'empty';
+      const c = document.createElement('td');
+      c.colSpan = 8;
+      c.textContent = '조건에 맞는 내역이 없습니다. 검색어를 지우거나 다른 보기 항목을 선택하세요.';
+      tr.appendChild(c);
+      tbody.appendChild(tr);
+    }
+    $('#count').textContent = '( 전체 ' + rows.length + '개 중 ' + (slice.length ? start + 1 : 0) + ' - ' + (start + slice.length) + ' )';
+    $('#pageLabel').textContent = state.page + ' 페이지';
+    $('#prev').disabled = state.page <= 1;
+    $('#next').disabled = state.page >= pages;
+    tbody.classList.remove('flash');
+    if (flash) { void tbody.offsetWidth; tbody.classList.add('flash'); }
+  }
+  function detailRow(r) {
+    const tr = document.createElement('tr');
+    tr.className = 'detail';
+    const c = document.createElement('td');
+    c.colSpan = 8;
+    const dl = document.createElement('dl');
+    dl.className = 'dl';
+    [['메뉴', r.menu || r.cat], ['활동', r.act || r.cat], ['내용', r.text], ['상세 내용', r.detail || detailOf(r)],
+     ['관리자 이름', r.name], ['통합계정', r.acct], ['관리범위', '전체'], ['관리권한', '모든 권한'],
+     ['관리자 접속 IP', IP[whoOf(r)]], ['시각', r.at]].forEach(([k, v]) => {
+      const dt = document.createElement('dt'); dt.textContent = k;
+      const dd = document.createElement('dd'); dd.textContent = v;
+      dl.append(dt, dd);
+    });
+    c.appendChild(dl);
+    tr.appendChild(c);
+    return tr;
+  }
+  $('#prev').addEventListener('click', () => { state.page--; state.openId = null; renderTable(); });
+  $('#next').addEventListener('click', () => { state.page++; state.openId = null; renderTable(); });
+  function runSearch() { state.query = $('#search').value; state.page = 1; renderTable(true); }
+  $('#searchBtn').addEventListener('click', runSearch);
+  $('#search').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
+  $('#search').addEventListener('search', runSearch);
+  function excelToast() { toast('엑셀 다운로드: 실제 콘솔에서는 현재 조회 중인 목록이 엑셀 파일로 저장됩니다.'); }
+  $('#excelBtn').addEventListener('click', excelToast);
+
+  /* ---------- 토스트 ---------- */
+  let toastTimer;
+  function toast(text) {
+    const t = $('#toast');
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+
+  /* ---------- 처음부터 다시 ---------- */
+  function reset() {
+    setMenu(false); setList(false); state.openId = null;
+    $('#toast').hidden = true;
+    state.filter = 'all'; state.page = 1; state.query = '';
+    $('#search').value = '';
+    $('#filterLabel').textContent = '전체';
+    filterList.querySelectorAll('[data-opt]').forEach((o) => o.setAttribute('aria-selected', String(o.dataset.opt === 'all')));
+    $('#pageAudit').hidden = true;
+    $('#pageHome').hidden = false;
+    renderTable();
+    go(1);
+    fit();
+  }
+  $('#restart').addEventListener('click', reset);
+
+  addEventListener('resize', fit);
+  new ResizeObserver(fit).observe(root);
+  reset();
+})();
+</script>
+</body>
+</html>
