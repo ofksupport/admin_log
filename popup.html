@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>관리자 활동 감사 내역 체험</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; --blue: #0d5fb3; --line: #d9dde3; --muted: #5b6470; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #e9ebee;
+    font-family: "Noto Sans KR", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", sans-serif; }
+
+  /* 상단 탭 */
+  .tabs { height: 48px; display: flex; align-items: flex-end; gap: 4px; padding: 0 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  .tab { position: relative; height: 47px; border: 0; background: transparent; padding: 0 18px; font: inherit; font-size: 15px; font-weight: 500;
+    color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 7px; }
+  .tab svg { width: 17px; height: 17px; }
+  .tab:hover { color: #222; }
+  .tab[aria-selected="true"] { color: var(--blue); font-weight: 700; }
+  .tab[aria-selected="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px; border-radius: 2px 2px 0 0; background: var(--blue); }
+  .tab:focus-visible { outline: 3px solid #f5a623; outline-offset: -3px; }
+
+  /* 탭 내용 */
+  .panes { position: absolute; top: 48px; left: 0; right: 0; bottom: 0; }
+  .panes iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #e9ebee; }
+  .panes iframe[hidden] { display: none; }
+</style>
+</head>
+<body>
+<nav class="tabs" role="tablist" aria-label="보기 선택">
+  <button class="tab" role="tab" id="tab-demo" aria-controls="pane-demo" aria-selected="true" data-key="demo">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 3.5v8.2l-2-1.6-1.4 1.4 4.4 5h7.5l1-5.6-5.1-1.3V3.5a1.2 1.2 0 0 0-2.4 0z" stroke-linejoin="round"/></svg>
+    직접 체험하기</button>
+  <button class="tab" role="tab" id="tab-compare" aria-controls="pane-compare" aria-selected="false" data-key="compare">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="4" width="6.5" height="12" rx="1"/><rect x="11" y="4" width="6.5" height="12" rx="1"/><path d="M5 8h1.5M13.5 8h2M13.5 11h2"/></svg>
+    변경점 한눈에 보기</button>
+</nav>
+<div class="panes">
+  <iframe id="pane-demo" role="tabpanel" aria-labelledby="tab-demo" title="직접 체험하기" data-src="demo.html"></iframe>
+  <iframe id="pane-compare" role="tabpanel" aria-labelledby="tab-compare" title="변경점 한눈에 보기" data-src="compare.html" hidden></iframe>
+</div>
+<script>
+/* 탭 전환: 처음 여는 탭만 불러오고, 한 번 연 탭은 상태를 그대로 유지합니다.
+   주소 끝에 #compare 를 붙이면 '변경점 한눈에 보기' 탭으로 바로 열립니다. */
+(function () {
+  const tabs = [...document.querySelectorAll('.tab')];
+  function show(key, focus) {
+    tabs.forEach((t) => {
+      const on = t.dataset.key === key;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      const pane = document.getElementById('pane-' + t.dataset.key);
+      pane.hidden = !on;
+      if (on && !pane.src) pane.src = pane.dataset.src;
+      if (on && focus) t.focus();
+    });
+    try { history.replaceState(null, '', key === 'demo' ? location.pathname : '#' + key); } catch (e) {}
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => show(t.dataset.key));
+    t.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      show(n.dataset.key, true);
+    });
+  });
+  show(location.hash === '#compare' ? 'compare' : 'demo');
+})();
+</script>
+</body>
+</html>

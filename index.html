@@ -24,14 +24,14 @@
 </style>
 </head>
 <body>
-<a class="card" id="card" href="demo.html" target="_blank" rel="noopener">
+<a class="card" id="card" href="popup.html" target="_blank" rel="noopener">
   <span class="tile"><svg viewBox="0 0 24 24"><path d="M5 3.5 19 12 5 20.5z" fill="#2383e2"/></svg></span>
-  <span class="tx"><b>관리자 활동 감사 내역 조회 체험</b><span>실제 콘솔과 같은 화면에서 직접 눌러 보세요</span></span>
+  <span class="tx"><b>관리자 활동 감사 내역 조회 체험</b><span>직접 체험하기 · 변경점 한눈에 보기</span></span>
   <span class="go">체험하기<svg viewBox="0 0 13 13"><path d="M4 1.5h7.5V9M11.5 1.5 2 11" fill="none" stroke="#fff" stroke-width="1.8"/></svg></span>
 </a>
 <script>
 /* 체험 화면을 알맞은 크기의 새 창(팝업)으로 열고, 팝업이 막히면 새 탭으로 엽니다 */
-const POP_W = 1040, POP_H = 1000;
+const POP_W = 1060, POP_H = 1040;
 document.getElementById('card').addEventListener('click', e => {
   const sw = screen.availWidth || 1280, sh = screen.availHeight || 800;
   const w = Math.min(POP_W, sw - 40), h = Math.min(POP_H, sh - 40);
